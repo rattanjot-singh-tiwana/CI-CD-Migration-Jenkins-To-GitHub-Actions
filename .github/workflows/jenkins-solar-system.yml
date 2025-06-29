@@ -1,0 +1,40 @@
+name: Solar System Workflow
+
+on: 
+  workflow_dispatch:
+  push:
+    branches:
+      - 'branch-b'
+
+env:
+    MONGO_URI: 'mongodb+srv://supercluster.d83jj.mongodb.net/superData'
+    MONGO_USERNAME: superuser
+    MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+
+jobs:
+    unit-testing:
+        runs-on: ${{ matrix.operating_system }}
+        strategy:
+            matrix:
+                nodejs_version: [20,21,22]
+                operating_system: [ubuntu-latest, macos-latest]
+        steps:
+        - name: Checkout Repository
+          uses: actions/checkout@v4
+
+        - name: Setup NodeJS
+          uses: actions/setup-node@v4
+          with:
+            node-version: ${{ matrix.nodejs_version }}
+    
+        - name: Install Dependencies
+          run: npm install --no-audit
+
+        - name: Unit Testing
+          run: npm test
+
+        - name: Archive Test Result
+          uses: actions/upload-artifact@v4
+          with:
+            name: Mocha-Test-Result-${{ matrix.nodejs_version }}-${{ matrix.operating_system }}
+            path: test-results.xml
