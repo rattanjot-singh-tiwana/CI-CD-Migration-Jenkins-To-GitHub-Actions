@@ -13,7 +13,7 @@ transform "dependencyCheck" do |item|
     {
 
         "name" => "Depcheck",
-        "uses" => "dependency-check/Dependency-Check-Action@main",
+        "uses" => "dependency-check/Dependency-Check_Action@main",
         "with" => {
             "project" => "test",
             "path" => ".",
@@ -73,7 +73,7 @@ coverage_cmd = item.dig("children", 0, "arguments", 0, "value", "value") || "npm
         {
 
             "name" => "Install dependencies",
-            "run" => "npm install -- no-audit",
+            "run" => "npm install --no-audit",
             "shell" => "bash"
         },
 
@@ -97,7 +97,7 @@ transform "sh" do |item|
   
   if script.include?("docker build") && script.include?("siddharth67/solar-system")
     coverted_script = script
-        .gsub('siddharth67','${{ vars.DOCKERHUB_USERNAME }}')
+        .gsub('rattantiwana','${{ vars.DOCKERHUB_USERNAME }}')
         .gsub('solar-system','${{ vars.IMAGE_NAME }}')
         .gsub('$GIT_COMMIT','${{ github.sha }}')
     
@@ -117,8 +117,8 @@ transform "sh" do |item|
         exit_code = (script.match(/--exit-code (\d+)/i)&.captures&.first || 1).to_i
         quiet = script.include?("--quiet")
 
-        normalized_image_ref = if image_ref.include?("siddharth67/solar-system")
-            "${{ vars.DOCKER_USERNAME}}/${{ vars.IMAGE_NAME}}:${{ github.sha}}"
+        normalized_image_ref = if image_ref.include?("rattantiwana/solar-system")
+            "${{ vars.DOCKERHUB_USERNAME}}/${{ vars.IMAGE_NAME}}:${{ github.sha}}"
         else
             image_ref
         end
