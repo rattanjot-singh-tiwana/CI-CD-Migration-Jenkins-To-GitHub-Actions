@@ -1,0 +1,188 @@
+name: ci-pipeline-poll-scm
+on:
+  push:
+    branches:
+    - branch-b
+    - main
+  schedule:
+  - cron: 00 00 * * *
+env:
+  MONGO_URI: "mongodb+srv://supercluster.d83jj.mongodb.net/superData"
+  MONGO_USERNAME: superuser
+  MONGO_PASSWORD: "${{ secrets.mongodb_password }}"
+jobs:
+  Installing_Dependencies:
+    name: Installing Dependencies
+    runs-on:
+      - ubuntu-latest
+    container:
+      image: node:24
+#       # This item has no matching transformer
+#       docker:
+#         key: args
+#         value:
+#           isLiteral: true
+#           value: "-u root:root"
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4.1.0
+  Dependency_Scanning_NPM_Dependency_Audit:
+    name: Dependency Scanning-NPM Dependency Audit
+    runs-on:
+      - ubuntu-latest
+    needs: Installing_Dependencies
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4.1.0
+  Dependency_Scanning_OWASP_Dependency_Check:
+    name: Dependency Scanning-OWASP Dependency Check
+    runs-on:
+      - ubuntu-latest
+    needs: Installing_Dependencies
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4.1.0
+    - name: Depcheck
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: test
+        path: "."
+        out: reports
+        format: ALL
+        args: "--failOnCVSS 9"
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4.1.0
+      with:
+        if-no-files-found: ignore
+        name: Dependency Check HTML Report
+        path: "."
+  Unit_Testing:
+    name: Unit Testing
+    runs-on:
+      - ubuntu-latest
+    container:
+      image: node:24
+#       # This item has no matching transformer
+#       docker:
+#         key: args
+#         value:
+#           isLiteral: true
+#           value: "-u root:root"
+    needs:
+    - Dependency_Scanning_NPM_Dependency_Audit
+    - Dependency_Scanning_OWASP_Dependency_Check
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4
+    - name: install dependencies
+      run: npm install --no-audit
+      shell: bash
+    - uses: nick-fields/retry@v3
+      with:
+        timeout_minutes: 60
+        continue_on_error: true
+        max_attempts: 2
+        retry_on: error
+        command: npm test
+    - name: Publish Test Results
+      uses: actions/upload-artifact@v4.1.0
+      with:
+        name: test-results
+        path: test-results.xml
+    - name: checkout
+      uses: actions/checkout@v4.1.0
+#     # This item maps to an unverified action that is not present in the allow list
+#     - name: Publish test results
+#       uses: EnricoMi/publish-unit-test-result-action@v2.12.0
+#       if: always()
+#       with:
+#         junit_files: test-results.xml
+  Code_Coverage:
+    name: Code Coverage
+    runs-on:
+      - ubuntu-latest
+    container:
+      image: node:24
+#       # This item has no matching transformer
+#       docker:
+#         key: args
+#         value:
+#           isLiteral: true
+#           value: "-u root:root"
+    needs: Unit_Testing
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4.1.0
+    - name: Install dependencies
+      run: npm install --no-audit
+      shell: bash
+    - name: Check Code Coverage
+      continue-on-error: true
+      run: npm run coverage
+      shell: bash
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4.1.0
+      with:
+        if-no-files-found: ignore
+        name: Code Coverage HTML Report
+        path: coverage/lcov-report
+  Build_Docker_Image:
+    name: Build Docker Image
+    runs-on:
+      - ubuntu-latest
+    needs: Code_Coverage
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4.1.0
+    - name: Docker Build
+      run: docker build -t ${{ vars.DOCKERHUB_USERNAME }}/${{ vars.IMAGE_NAME }}:${{ github.sha }} .
+      shell: bash
+  Push_Docker_Image:
+    name: Push Docker Image
+    runs-on:
+      - ubuntu-latest
+    needs: Build_Docker_Image
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4.1.0
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: "${{ vars.DOCKERHUB_USERNAME }}"
+        password: "${{ secrets.DOCKERHUB_TOKEN }}"
+    - name: Build and push
+      uses: docker/build-push-action@v6
+      with:
+        push: true
+        tags: "${{ vars.DOCKERHUB_USERNAME}}/${{ vars.IMAGE_NAME }}:${{ github.sha }}"
+  Trivy_Vulnerability_Scanner:
+    name: Trivy Vulnerability Scanner
+    runs-on:
+      - ubuntu-latest
+    needs: Push_Docker_Image
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4.1.0
+    - name: Trivy Security Scan
+      uses: aquasecurity/trivy-action@0.30.0
+      with:
+        image-ref: "${{ vars.DOCKERHUB_USERNAME}}/${{ vars.IMAGE_NAME}}:${{ github.sha}}"
+        severity: CRITICAL
+        format: template
+        template: "@$HOME/.local/bin/trivy-bin/contrib/html.tpl"
+        output: trivy-results.html
+        exit-code: 1
+        hide-progress: true
+    - name: Upload Scan Report
+      if: "${{ always() }}"
+      uses: actions/upload-artifact@v4
+      with:
+        name: Trivy Report
+        path: trivy-results.html
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4.1.0
+      with:
+        if-no-files-found: ignore
+        name: Trivy Image Critical Vul Report
+        path: "."
+
