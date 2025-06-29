@@ -74,7 +74,7 @@ jobs:
     - name: checkout
       uses: actions/checkout@v4
     - name: install dependencies
-      run: npm install -- no-audit
+      run: npm install --no-audit
       shell: bash
     - uses: nick-fields/retry@v3
       with:
