@@ -148,7 +148,7 @@ jobs:
     - name: Trivy Security Scan
       uses: aquasecurity/trivy-action@0.30.0
       with:
-        image-ref: "${{ vars.DOCKER_USERNAME}}/${{ vars.IMAGE_NAME}}:${{ github.sha}}"
+        image-ref: "${{ vars.DOCKERHUB_USERNAME}}/${{ vars.IMAGE_NAME}}:${{ github.sha}}"
         severity: CRITICAL
         format: template
         template: "@HOME/.local/bin/trivy-bin/contrib/html.tpl"
