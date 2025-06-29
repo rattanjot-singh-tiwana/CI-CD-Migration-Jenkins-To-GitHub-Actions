@@ -141,7 +141,7 @@ jobs:
     name: Push Docker Image
     runs-on:
       - ubuntu-latest
-    needs: Build Docker Image
+    needs: Build_Docker_Image
     steps:
     - name: checkout
       uses: actions/checkout@v4.1.0
@@ -159,7 +159,7 @@ jobs:
     name: Trivy Vulnerability Scanner
     runs-on:
       - ubuntu-latest
-    needs: Push Docker Image
+    needs: Push_Docker_Image
     steps:
     - name: checkout
       uses: actions/checkout@v4.1.0
