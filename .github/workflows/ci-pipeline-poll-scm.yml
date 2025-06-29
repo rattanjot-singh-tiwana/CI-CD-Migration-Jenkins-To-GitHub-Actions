@@ -169,7 +169,7 @@ jobs:
         image-ref: "${{ vars.DOCKERHUB_USERNAME}}/${{ vars.IMAGE_NAME}}:${{ github.sha}}"
         severity: CRITICAL
         format: template
-        template: "@HOME/.local/bin/trivy-bin/contrib/html.tpl"
+        template: "@$HOME/.local/bin/trivy-bin/contrib/html.tpl"
         output: trivy-results.html
         exit-code: 1
         hide-progress: true
