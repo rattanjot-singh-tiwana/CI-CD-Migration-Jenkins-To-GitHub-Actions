@@ -1,5 +1,6 @@
 name: ci-pipeline-poll-scm
 on:
+  workflow_dispatch:
   push:
     branches:
     - branch-b
