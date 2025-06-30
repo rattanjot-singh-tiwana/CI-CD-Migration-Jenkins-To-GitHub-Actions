@@ -1,5 +1,5 @@
 pipeline {
-    agent {
+    agent { 
         label 'ubuntu-docker'
     }
     tools {
